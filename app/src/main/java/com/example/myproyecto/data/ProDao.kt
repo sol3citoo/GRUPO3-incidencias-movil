@@ -5,11 +5,10 @@ import androidx.room.*
 @Dao
 interface ProDao {
 
+    // ------------------ PROYECTOS ------------------
+
     @Query("SELECT * FROM Proyecto")
     suspend fun getAll(): List<Proyecto>
-
-    @Query("SELECT * FROM Usuarios")
-    suspend fun getAllU(): List<Usuarios>
 
     @Insert
     suspend fun insertPro(proyecto: Proyecto)
@@ -20,25 +19,16 @@ interface ProDao {
     @Delete
     suspend fun deleteProyecto(proyecto: Proyecto)
 
-    @Insert
-    suspend fun insertUsu(usuarios: Usuarios)
-
-    @Query("""
-        SELECT * FROM Usuarios
-        WHERE correo = :correo
-        AND contraseña = :contraseña
-        LIMIT 1
-    """)
-    suspend fun login(correo: String, contraseña: String): Usuarios?
-
-    @Query("""
+    @Query(
+        """
         SELECT * FROM Proyecto
         WHERE (:id = '-' OR id = :idInt)
         AND (:categoria = '-' OR categoria = :categoria)
         AND (:estado = '-' OR estado = :estado)
         AND (:urgencia = '-' OR urgencia = :urgencia)
         AND (:ubicacion = '-' OR ubicacion = :ubicacion)
-    """)
+    """
+    )
     suspend fun filtrarProyectos(
         id: String,
         idInt: Int,
@@ -59,5 +49,42 @@ interface ProDao {
 
     @Query("SELECT DISTINCT ubicacion FROM Proyecto")
     suspend fun getUbicaciones(): List<String>
+
+    @Query("SELECT id FROM Proyecto")
+    suspend fun getAllIds(): List<Int>
+
+    @Query("SELECT MAX(id) FROM Proyecto")
+    suspend fun obtenerUltimoIdProyecto(): Int?
+
+    // ------------------ USUARIOS ------------------
+
+
+    @Query("SELECT * FROM Usuarios")
+    suspend fun getAllU(): List<Usuarios>
+
+
+    @Insert
+    suspend fun insertUsu(usuarios: Usuarios)
+
+    @Query(
+        """
+        SELECT * FROM Usuarios
+        WHERE correo = :correo
+        AND contraseña = :contraseña
+        LIMIT 1
+    """
+    )
+    suspend fun login(correo: String, contraseña: String): Usuarios?
+
+
+    @Query("SELECT MAX(id) FROM Usuarios")
+    suspend fun obtenerUltimoId(): Int?
+
+
+    @Update
+    suspend fun updateUsuario(usuario: Usuarios)
+
+    @Delete
+    suspend fun deleteUsuario(usuario: Usuarios)
 
 }

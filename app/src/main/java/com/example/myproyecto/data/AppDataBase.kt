@@ -169,7 +169,7 @@ abstract class AppDataBase : RoomDatabase() {
                                         titulo = "App no inicia",
                                         descripcion = "La aplicación de inventarios no abre tras el login.",
                                         categoria = "Software",
-                                        estado = "En proceso",
+                                        estado = "Abierta",
                                         urgencia = "Media",
                                         fecha = "1-5-25",
                                         ubicacion = "B102"
@@ -253,7 +253,7 @@ abstract class AppDataBase : RoomDatabase() {
                                         titulo = "Ratón no funciona",
                                         descripcion = "El ratón inalámbrico no responde correctamente.",
                                         categoria = "Hardware",
-                                        estado = "En proceso",
+                                        estado = "Cerrada",
                                         urgencia = "Media",
                                         fecha = "15-11-25",
                                         ubicacion = "B203"

@@ -32,13 +32,14 @@ fun PantallaPrincipal(
     val context = LocalContext.current
     val esAdmin = usuario?.tipo == "administrador"
 
-    // 🔹 Cargar datos iniciales
+    //  Cargar datos iniciales
     LaunchedEffect(Unit) {
         viewModel.cargarFiltrados("-", "-", "-", "-", "-")
         viewModel.cargarOpciones() // llena filtros dinámicos
+        viewModel.cargarTodosIds() // 🔹 Cargar todos los IDs
     }
 
-    // 🔹 Estados de filtros
+    //  Estados de filtros
     var selectedId by remember { mutableStateOf("-") }
     var selectedCategoria by remember { mutableStateOf("-") }
     var selectedEstado by remember { mutableStateOf("-") }
@@ -48,14 +49,15 @@ fun PantallaPrincipal(
     val proyectoSel = proyectoSeleccionado
     var mostrarDialogoBorrar by remember { mutableStateOf(false) }
 
-    // 🔹 Lista de opciones dinámicas
-    val listaIds = listOf("-") + proyectos.map { it.id.toString() }
-    val listaCategorias = listOf("-") + categorias.distinct()
-    val listaEstados = listOf("-") + estados.distinct()
-    val listaUrgencias = listOf("-") + urgencias.distinct()
-    val listaUbicaciones = listOf("-") + ubicaciones.distinct()
+    //  Lista de opciones dinámicas
+    val ids by viewModel.ids.collectAsState()
+    val listaIds = listOf("-") + ids
+    val listaCategorias = listOf("-") + (categorias.ifEmpty { listOf() })
+    val listaEstados = listOf("-") + (estados.ifEmpty { listOf() })
+    val listaUrgencias = listOf("-") + (urgencias.ifEmpty { listOf() })
+    val listaUbicaciones = listOf("-") + (ubicaciones.ifEmpty { listOf() })
 
-    // 🔹 ComboBox reutilizable
+    //  ComboBox reutilizable
     @Composable
     fun ComboBox(label: String, options: List<String>, selectedOption: String, onOptionSelected: (String) -> Unit) {
         var expanded by remember { mutableStateOf(false) }
@@ -85,28 +87,16 @@ fun PantallaPrincipal(
         }
     }
 
-    // 🔹 UI principal
+
+    //  UI principal
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Bienvenido ${usuario?.correo}")
-        Spacer(modifier = Modifier.height(16.dp))
 
-        // 🔹 Botones superiores
-        Row {
-            Button(onClick = {
-                viewModel.logout()
-                navController.navigate("login") { popUpTo(navController.graph.startDestinationId) { inclusive = true } }
-            }) { Text("Salir") }
 
-            Spacer(modifier = Modifier.width(16.dp))
 
-            Button(onClick = {
-                viewModel.cargarFiltrados(selectedId, selectedCategoria, selectedEstado, selectedUrgencia, selectedUbicacion)
-            }) { Text("Cargar") }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
 
-        // 🔹 Filtros ComboBox dinámicos
+
+        //  Filtros ComboBox dinámicos
         ComboBox("ID Incidencia", listaIds, selectedId) { selectedId = it }
         ComboBox("Categoría", listaCategorias, selectedCategoria) { selectedCategoria = it }
         ComboBox("Estado", listaEstados, selectedEstado) { selectedEstado = it }
@@ -115,36 +105,27 @@ fun PantallaPrincipal(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 🔹 Botones de acción
+        //  Botones superiores
         Row {
-            Button(
-                onClick = { mostrarDialogoBorrar = true },
-                enabled = esAdmin && proyectoSel != null
-            ) { Text("Borrar") }
+            Button(onClick = {
+                navController.navigate("menu") {
+                    popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                }
+            }) {
+                Text("Salir")
+            }
 
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
-            Button(
-                onClick = { navController.navigate("detalle/AÑADIR") },
-                enabled = esAdmin
-            ) { Text("Crear") }
-
-            Spacer(modifier = Modifier.width(10.dp))
-
-            Button(
-                onClick = {
-                    if (proyectoSel == null) {
-                        Toast.makeText(context, "Tienes que seleccionar una incidencia de la lista", Toast.LENGTH_SHORT).show()
-                    } else {
-                        val modo = if (esAdmin) "MODIFICAR" else "VER"
-                        navController.navigate("detalle/$modo")
-                    }
-                },
-                enabled = true
-            ) { Text(if (esAdmin) "Modificar" else "Ver") }
+            Button(onClick = {
+                viewModel.cargarFiltrados(selectedId, selectedCategoria, selectedEstado, selectedUrgencia, selectedUbicacion)
+            }) { Text("Cargar") }
         }
+        Spacer(modifier = Modifier.height(16.dp))
 
-        Spacer(modifier = Modifier.height(20.dp))
+
+
+
         Text("Lista de Proyectos")
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -165,6 +146,49 @@ fun PantallaPrincipal(
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(proyecto.titulo)
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        //  Botones de acción
+        Row {
+
+            // BOTÓN BORRAR
+            Button(
+                onClick = { mostrarDialogoBorrar = true },
+                enabled = esAdmin && proyectoSel != null
+            ) { Text("Borrar") }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+
+            // BOTÓN VER
+            Button(
+                onClick = {
+                    if (proyectoSel == null) {
+                        Toast.makeText(context, "Tienes que seleccionar una incidencia de la lista", Toast.LENGTH_SHORT).show()
+                    } else {
+                        navController.navigate("detalle/VER")
+                    }
+                }
+            ) {
+                Text("Ver")
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            // ✏BOTÓN MODIFICAR
+            Button(
+                onClick = {
+                    if (proyectoSel == null) {
+                        Toast.makeText(context, "Tienes que seleccionar una incidencia de la lista", Toast.LENGTH_SHORT).show()
+                    } else {
+                        navController.navigate("detalle/MODIFICAR")
+                    }
+                }
+            ) {
+                Text("Modificar")
             }
         }
     }

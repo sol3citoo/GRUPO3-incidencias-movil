@@ -5,11 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -18,44 +16,65 @@ import androidx.navigation.NavHostController
 import com.example.myproyecto.data.Proyecto
 import androidx.compose.ui.Alignment
 
-
-
-
-
 @Composable
 fun PantallaDetalle(
     navController: NavHostController,
     viewModel: ProViewModel,
     modo: String // "VER", "MODIFICAR" o "AÑADIR"
 ) {
+    LaunchedEffect(Unit) {
+        viewModel.cargarOpciones()
+       // viewModel.cargarUltimoIdProyecto()
+    }
+
     val proyectoSeleccionado by viewModel.proyectoSeleccionado.collectAsState()
     val categorias by viewModel.categorias.collectAsState()
     val estados by viewModel.estados.collectAsState()
     val urgencias by viewModel.urgencias.collectAsState()
     val ubicaciones by viewModel.ubicaciones.collectAsState()
     val context = LocalContext.current
+    val proximoId = viewModel.ultimoIdProyecto.value
+    val usuario by viewModel.usuarioActual.collectAsState()
+    val esAdmin = usuario?.tipo == "administrador"
 
     if (modo != "AÑADIR" && proyectoSeleccionado == null) {
-        // Mensaje si no hay proyecto seleccionado
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("Tienes que seleccionar una incidencia de la lista")
         }
         return
     }
 
-    // Variables de estado para los campos
+    //  Variables de estado
     var titulo by remember { mutableStateOf(proyectoSeleccionado?.titulo ?: "") }
     var descripcion by remember { mutableStateOf(proyectoSeleccionado?.descripcion ?: "") }
     var categoria by remember { mutableStateOf(proyectoSeleccionado?.categoria ?: "") }
-    var estado by remember { mutableStateOf(proyectoSeleccionado?.estado ?: "") }
+    var estado by remember { mutableStateOf(if (modo == "AÑADIR") "Abierta" else proyectoSeleccionado?.estado ?: "") }
     var urgencia by remember { mutableStateOf(proyectoSeleccionado?.urgencia ?: "") }
     var ubicacion by remember { mutableStateOf(proyectoSeleccionado?.ubicacion ?: "") }
-    val id = proyectoSeleccionado?.id ?: 0
     val fecha = proyectoSeleccionado?.fecha ?: viewModel.obtenerFechaActual()
 
-    val editable = modo != "VER"
+    //  Control de edición según usuario y modo
+    val editableCampos = when {
+        modo == "VER" -> false
+        modo == "AÑADIR" -> true
+        modo == "MODIFICAR" && esAdmin -> true
+        else -> false
+    }
 
-    // Contenedor scrollable
+    val estadoEditable = when {
+        modo == "AÑADIR" -> false
+        modo == "MODIFICAR" -> true
+        else -> false
+    }
+
+    //  Filtrar estados según permisos del usuario
+    val estadosDisponibles = if (esAdmin || modo == "AÑADIR") {
+        estados
+    } else {
+        estados.filter { it.lowercase() != "cerrada" }
+    }
+
+    //  Contenedor scrollable
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -65,6 +84,7 @@ fun PantallaDetalle(
 
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             Button(onClick = { navController.popBackStack() }) { Text("Volver") }
+
             if (modo != "VER") {
                 Button(onClick = {
                     if (titulo.isBlank() || descripcion.isBlank() || categoria.isBlank() || estado.isBlank() || urgencia.isBlank() || ubicacion.isBlank()) {
@@ -74,15 +94,7 @@ fun PantallaDetalle(
 
                     if (modo == "AÑADIR") {
                         viewModel.crearProyecto(
-                            proyectoSeleccionado?.copy(
-                                titulo = titulo,
-                                descripcion = descripcion,
-                                categoria = categoria,
-                                estado = estado,
-                                urgencia = urgencia,
-                                ubicacion = ubicacion,
-                                fecha = fecha
-                            ) ?: Proyecto(
+                            Proyecto(
                                 titulo = titulo,
                                 descripcion = descripcion,
                                 categoria = categoria,
@@ -104,6 +116,7 @@ fun PantallaDetalle(
                             )
                         )
                     }
+
                     Toast.makeText(context, "Datos guardados", Toast.LENGTH_SHORT).show()
                     navController.popBackStack()
                 }) { Text("Guardar") }
@@ -112,91 +125,129 @@ fun PantallaDetalle(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 🔹 ID
+        //  ID
         Text("ID Incidencia")
+        val idMostrar = if (modo == "AÑADIR") (proximoId + 1).toString() else (proyectoSeleccionado?.id ?: "").toString()
         OutlinedTextField(
-            value = id.toString(),
+            value = idMostrar,
             onValueChange = {},
             enabled = false,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            trailingIcon = { Icon(Icons.Filled.Lock, contentDescription = "Bloqueado") },
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                disabledBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                disabledLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 🔹 Título
+        //  Título
         Text("Título")
         OutlinedTextField(
             value = titulo,
-            onValueChange = { if (editable) titulo = it },
-            enabled = editable,
-            modifier = Modifier.fillMaxWidth()
+            onValueChange = { if (editableCampos) titulo = it },
+            enabled = editableCampos,
+            modifier = Modifier.fillMaxWidth(),
+            trailingIcon = { if (!editableCampos) Icon(Icons.Filled.Lock, contentDescription = "Bloqueado") },
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                disabledBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                disabledLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 🔹 Descripción
+        //  Descripción
         Text("Descripción")
         OutlinedTextField(
             value = descripcion,
-            onValueChange = { if (editable) descripcion = it },
-            enabled = editable,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(100.dp)
+            onValueChange = { if (editableCampos) descripcion = it },
+            enabled = editableCampos,
+            modifier = Modifier.fillMaxWidth().height(100.dp),
+            trailingIcon = { if (!editableCampos) Icon(Icons.Filled.Lock, contentDescription = "Bloqueado") },
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                disabledBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                disabledLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 🔹 Categoría
+        //  Categoría
         Text("Categoría")
         ComboBoxDynamic(
             options = categorias,
             selectedOption = categoria,
-            editable = editable,
+            editable = editableCampos,
             onOptionSelected = { categoria = it }
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 🔹 Estado
+        //  Estado
         Text("Estado")
-        ComboBoxDynamic(
-            options = estados,
-            selectedOption = estado,
-            editable = editable,
-            onOptionSelected = { estado = it }
-        )
+        if (modo == "AÑADIR") {
+            OutlinedTextField(
+                value = "Abierta",
+                onValueChange = {},
+                enabled = false,
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = { Icon(Icons.Filled.Lock, contentDescription = "Bloqueado") },
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    disabledBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                    disabledLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            )
+        } else {
+            ComboBoxDynamic(
+                options = estadosDisponibles,
+                selectedOption = estado,
+                editable = estadoEditable,
+                onOptionSelected = { estado = it }
+            )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 🔹 Urgencia
+        //  Urgencia
         Text("Urgencia")
         ComboBoxDynamic(
             options = urgencias,
             selectedOption = urgencia,
-            editable = editable,
+            editable = editableCampos,
             onOptionSelected = { urgencia = it }
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 🔹 Fecha
+        //  Fecha
         Text("Fecha")
         OutlinedTextField(
             value = fecha,
             onValueChange = {},
             enabled = false,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            trailingIcon = { Icon(Icons.Filled.Lock, contentDescription = "Bloqueado") },
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                disabledBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                disabledLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 🔹 Ubicación (ahora ancho completo)
+        //  Ubicación
         Text("Ubicación")
         ComboBoxDynamic(
             options = ubicaciones,
             selectedOption = ubicacion,
-            editable = editable,
+            editable = editableCampos,
             onOptionSelected = { ubicacion = it },
             modifier = Modifier.fillMaxWidth()
         )
@@ -205,6 +256,7 @@ fun PantallaDetalle(
     }
 }
 
+//  ComboBox dinámico con bloqueo
 @Composable
 fun ComboBoxDynamic(
     options: List<String>,
@@ -221,10 +273,17 @@ fun ComboBoxDynamic(
             onValueChange = {},
             readOnly = true,
             enabled = false,
+            trailingIcon = { if (!editable) Icon(Icons.Filled.Lock, contentDescription = "Bloqueado") },
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(enabled = editable) { expanded = true }
+                .clickable(enabled = editable) { expanded = true },
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                disabledBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                disabledLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
         )
+
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { option ->
                 DropdownMenuItem(

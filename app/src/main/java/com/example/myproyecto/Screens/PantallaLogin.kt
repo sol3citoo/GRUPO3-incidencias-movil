@@ -9,11 +9,15 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.sp
 import com.example.myproyecto.R
 
@@ -25,12 +29,13 @@ fun PantallaLogin(navController: NavHostController, viewModel: ProViewModel) {
     var contraseña by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
     val loginState by viewModel.loginState.collectAsState()
+    var passwordVisible by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
 
-        // 🔵 CABECERA AZUL
+        //  CABECERA AZUL
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -58,7 +63,7 @@ fun PantallaLogin(navController: NavHostController, viewModel: ProViewModel) {
             )
         }
 
-        // 🔹 FORMULARIO LOGIN
+        //  FORMULARIO LOGIN
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -84,7 +89,26 @@ fun PantallaLogin(navController: NavHostController, viewModel: ProViewModel) {
                     value = contraseña,
                     onValueChange = { contraseña = it },
                     label = { Text("Contraseña") },
-                    visualTransformation = PasswordVisualTransformation()
+                    visualTransformation = if (passwordVisible) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
+                    trailingIcon = {
+                        val image = if (passwordVisible)
+                            Icons.Filled.Lock
+                        else
+                            Icons.Filled.AccountCircle
+
+                        IconButton(onClick = {
+                            passwordVisible = !passwordVisible
+                        }) {
+                            Icon(
+                                imageVector = image,
+                                contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña"
+                            )
+                        }
+                    }
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -115,7 +139,7 @@ fun PantallaLogin(navController: NavHostController, viewModel: ProViewModel) {
 
     LaunchedEffect(loginState) {
         if (loginState is LoginState.Success) {
-            navController.navigate("principal") {
+            navController.navigate("menu") {
                 popUpTo("login") { inclusive = true }
             }
         }

@@ -10,8 +10,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.myproyecto.Screens.PantallaDetalle
+import com.example.myproyecto.Screens.PantallaDetalleUsuarios
 import com.example.myproyecto.Screens.PantallaLogin
+import com.example.myproyecto.Screens.PantallaMenu
 import com.example.myproyecto.Screens.PantallaPrincipal
+import com.example.myproyecto.Screens.PantallaUsuarios
 import com.example.myproyecto.Screens.ProViewModel
 import com.example.myproyecto.ui.theme.MyProyectoTheme
 
@@ -30,9 +33,30 @@ class MainActivity : ComponentActivity() {
                             PantallaLogin(navController, viewModel)
                         }
 
+                        // Pantalla de menú
+                        composable("menu") {
+                            PantallaMenu(navController, viewModel)
+                        }
+
                         // Pantalla principal con lista de proyectos
                         composable("principal") {
                             PantallaPrincipal(navController, viewModel)
+                        }
+
+                        // Pantalla usuarios
+                        composable("usuarios") {
+                            PantallaUsuarios(navController, viewModel)
+                        }
+
+                        // Pantalla detalles usuarios
+                        composable("detalleUsuario/{modo}") { backStackEntry ->
+                            val modo = backStackEntry.arguments?.getString("modo") ?: "VER"
+
+                            PantallaDetalleUsuarios(
+                                navController = navController,
+                                viewModel = viewModel,
+                                modo = modo
+                            )
                         }
 
                         // Pantalla detalle (VER, MODIFICAR o AÑADIR) - modo se pasa como String
