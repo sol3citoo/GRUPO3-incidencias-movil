@@ -1,21 +1,19 @@
-package com.example.myproyecto.Screens
+package com.example.myproyecto.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import androidx.compose.runtime.collectAsState as collectAsState1
 
 @Composable
-fun PantallaMenu(navController: NavHostController, viewModel: ProViewModel) {
-    val usuario = viewModel.usuarioActual.collectAsState1().value
-    val esAdmin = usuario?.tipo == "administrador"
+fun PantallaMenu(navController: NavHostController, viewModel: ProViewModelAPI) {
+    val usuario by viewModel.usuarioActual.collectAsState()
+    val esAdmin = usuario?.rolId == 2
 
-    // Contenedor central
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -23,36 +21,26 @@ fun PantallaMenu(navController: NavHostController, viewModel: ProViewModel) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Bienvenido ${usuario?.correo}")
+        Text("Bienvenido, ${usuario?.nombre ?: ""}")
         Spacer(modifier = Modifier.height(106.dp))
         Text("Menú principal", modifier = Modifier.padding(bottom = 32.dp))
 
-        //  Botón 1: Ver / Modificar incidencias
         Button(
             onClick = { navController.navigate("principal") },
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-        ) {
-            Text("Ver / Modificar incidencias")
-        }
+        ) { Text("Ver / Modificar incidencias") }
 
-        //  Botón 2: Añadir incidencias
         Button(
             onClick = { navController.navigate("detalle/AÑADIR") },
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-        ) {
-            Text("Añadir incidencias")
-        }
+        ) { Text("Añadir incidencias") }
 
-        //  Botón 3: Ver usuarios (solo administradores)
         Button(
             onClick = { navController.navigate("usuarios") },
             enabled = esAdmin,
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-        ) {
-            Text("Ver usuarios")
-        }
+        ) { Text("Ver usuarios") }
 
-        //  Botón 4: Cerrar sesión
         Button(
             onClick = {
                 viewModel.logout()
@@ -61,8 +49,6 @@ fun PantallaMenu(navController: NavHostController, viewModel: ProViewModel) {
                 }
             },
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-        ) {
-            Text("Cerrar sesión")
-        }
+        ) { Text("Cerrar sesión") }
     }
 }

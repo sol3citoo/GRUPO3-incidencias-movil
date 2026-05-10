@@ -9,13 +9,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.myproyecto.Screens.PantallaDetalle
-import com.example.myproyecto.Screens.PantallaDetalleUsuarios
-import com.example.myproyecto.Screens.PantallaLogin
-import com.example.myproyecto.Screens.PantallaMenu
-import com.example.myproyecto.Screens.PantallaPrincipal
-import com.example.myproyecto.Screens.PantallaUsuarios
-import com.example.myproyecto.Screens.ProViewModel
+import com.example.myproyecto.screens.PantallaDetalle
+import com.example.myproyecto.screens.PantallaDetalleUsuarios
+import com.example.myproyecto.screens.PantallaLogin
+import com.example.myproyecto.screens.PantallaMenu
+import com.example.myproyecto.screens.PantallaPrincipal
+import com.example.myproyecto.screens.PantallaUsuarios
+import com.example.myproyecto.screens.ProViewModelAPI
 import com.example.myproyecto.ui.theme.MyProyectoTheme
 
 class MainActivity : ComponentActivity() {
@@ -24,7 +24,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MyProyectoTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    val viewModel: ProViewModel = viewModel()
+                    val viewModel: ProViewModelAPI = viewModel()
                     val navController = rememberNavController()
 
                     NavHost(navController = navController, startDestination = "login") {
@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
                             PantallaMenu(navController, viewModel)
                         }
 
-                        // Pantalla principal con lista de proyectos
+                        // Pantalla principal con lista de incidencias
                         composable("principal") {
                             PantallaPrincipal(navController, viewModel)
                         }
@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // Pantalla detalle (VER, MODIFICAR o AÑADIR) - modo se pasa como String
+                        // Pantalla detalle (VER, MODIFICAR o AÑADIR)
                         composable("detalle/{modo}") { backStackEntry ->
                             val modo = backStackEntry.arguments?.getString("modo") ?: "VER"
                             PantallaDetalle(

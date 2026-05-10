@@ -1,4 +1,4 @@
-package com.example.myproyecto.Screens
+package com.example.myproyecto.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -23,7 +23,7 @@ import com.example.myproyecto.R
 
 
 @Composable
-fun PantallaLogin(navController: NavHostController, viewModel: ProViewModel) {
+fun PantallaLogin(navController: NavHostController, viewModel: ProViewModelAPI) {
 
     var correo by remember { mutableStateOf("") }
     var contraseña by remember { mutableStateOf("") }
@@ -31,22 +31,29 @@ fun PantallaLogin(navController: NavHostController, viewModel: ProViewModel) {
     val loginState by viewModel.loginState.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
 
+    println(loginState is LoginState.Success)
+    LaunchedEffect(loginState) {
+        if (loginState is LoginState.Success) {
+            navController.navigate("menu") {
+                popUpTo("login") { inclusive = true }
+            }
+        }
+    }
+
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-
-        //  CABECERA AZUL
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF1565C0)) // Azul profesional
+                .background(Color(0xFF1565C0))
                 .padding(vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // 🖼 Logo
+            // Logo
             Image(
-                painter = painterResource(id = R.drawable.logo), // <-- nombre de tu logo
+                painter = painterResource(id = R.drawable.logo),
                 contentDescription = "Logo",
                 modifier = Modifier
                     .height(100.dp)
@@ -131,6 +138,7 @@ fun PantallaLogin(navController: NavHostController, viewModel: ProViewModel) {
                 when (loginState) {
                     is LoginState.Error ->
                         Text("Usuario o contraseña incorrectos", color = Color.Red)
+
                     else -> {}
                 }
             }

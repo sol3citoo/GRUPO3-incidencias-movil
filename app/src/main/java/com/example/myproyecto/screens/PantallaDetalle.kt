@@ -1,4 +1,4 @@
-package com.example.myproyecto.Screens
+package com.example.myproyecto.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.clickable
@@ -9,72 +9,67 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.example.myproyecto.data.Proyecto
-import androidx.compose.ui.Alignment
 
 @Composable
 fun PantallaDetalle(
     navController: NavHostController,
-    viewModel: ProViewModel,
+    viewModel: ProViewModelAPI,
     modo: String // "VER", "MODIFICAR" o "AÑADIR"
 ) {
     LaunchedEffect(Unit) {
         viewModel.cargarOpciones()
-       // viewModel.cargarUltimoIdProyecto()
     }
 
-    val proyectoSeleccionado by viewModel.proyectoSeleccionado.collectAsState()
+    val incidenciaSeleccionada by viewModel.incidenciaSeleccionada.collectAsState()
     val categorias by viewModel.categorias.collectAsState()
     val estados by viewModel.estados.collectAsState()
     val urgencias by viewModel.urgencias.collectAsState()
     val ubicaciones by viewModel.ubicaciones.collectAsState()
-    val context = LocalContext.current
-    val proximoId = viewModel.ultimoIdProyecto.value
     val usuario by viewModel.usuarioActual.collectAsState()
-    val esAdmin = usuario?.tipo == "administrador"
+    val context = LocalContext.current
+    val esAdmin = usuario?.rolId == 2
 
-    if (modo != "AÑADIR" && proyectoSeleccionado == null) {
+    if (modo != "AÑADIR" && incidenciaSeleccionada == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("Tienes que seleccionar una incidencia de la lista")
         }
         return
     }
 
-    //  Variables de estado
-    var titulo by remember { mutableStateOf(proyectoSeleccionado?.titulo ?: "") }
-    var descripcion by remember { mutableStateOf(proyectoSeleccionado?.descripcion ?: "") }
-    var categoria by remember { mutableStateOf(proyectoSeleccionado?.categoria ?: "") }
-    var estado by remember { mutableStateOf(if (modo == "AÑADIR") "Abierta" else proyectoSeleccionado?.estado ?: "") }
-    var urgencia by remember { mutableStateOf(proyectoSeleccionado?.urgencia ?: "") }
-    var ubicacion by remember { mutableStateOf(proyectoSeleccionado?.ubicacion ?: "") }
-    val fecha = proyectoSeleccionado?.fecha ?: viewModel.obtenerFechaActual()
+    // Campos editables — se inicializan con los datos de la incidencia seleccionado
+    var titulo by remember { mutableStateOf(incidenciaSeleccionada?.titulo ?: "") }
+    var descripcion by remember { mutableStateOf(incidenciaSeleccionada?.descripcion ?: "") }
+    var categoria by remember { mutableStateOf(incidenciaSeleccionada?.categoria ?: "") }
+    var estado by remember {
+        mutableStateOf(
+            if (modo == "AÑADIR") "Abierta" else incidenciaSeleccionada?.estado ?: ""
+        )
+    }
+    var urgencia by remember { mutableStateOf(incidenciaSeleccionada?.urgencia ?: "") }
+    var ubicacion by remember { mutableStateOf(incidenciaSeleccionada?.ubicacion ?: "") }
+    val fecha = incidenciaSeleccionada?.fecha ?: viewModel.obtenerFechaActual()
 
-    //  Control de edición según usuario y modo
+    // Permisos de edición
     val editableCampos = when {
         modo == "VER" -> false
         modo == "AÑADIR" -> true
         modo == "MODIFICAR" && esAdmin -> true
         else -> false
     }
+    val estadoEditable = modo == "MODIFICAR"
 
-    val estadoEditable = when {
-        modo == "AÑADIR" -> false
-        modo == "MODIFICAR" -> true
-        else -> false
-    }
+    val estadosDisponibles = if (esAdmin) estados
+    else estados.filter { it.lowercase() != "cerrada" }
 
-    //  Filtrar estados según permisos del usuario
-    val estadosDisponibles = if (esAdmin || modo == "AÑADIR") {
-        estados
-    } else {
-        estados.filter { it.lowercase() != "cerrada" }
-    }
+    // Nombres de categorías y ubicaciones para los ComboBox
+    val nombresCategorias = categorias.map { it.nombre }
+    val nombresUbicaciones = ubicaciones.map { it.nombre }
 
-    //  Contenedor scrollable
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -87,34 +82,49 @@ fun PantallaDetalle(
 
             if (modo != "VER") {
                 Button(onClick = {
-                    if (titulo.isBlank() || descripcion.isBlank() || categoria.isBlank() || estado.isBlank() || urgencia.isBlank() || ubicacion.isBlank()) {
-                        Toast.makeText(context, "Rellena todos los campos", Toast.LENGTH_SHORT).show()
+                    if (titulo.isBlank() || descripcion.isBlank() || categoria.isBlank() ||
+                        estado.isBlank() || urgencia.isBlank() || ubicacion.isBlank()
+                    ) {
+                        Toast.makeText(context, "Rellena todos los campos", Toast.LENGTH_SHORT)
+                            .show()
+                        return@Button
+                    }
+
+                    // Buscar los IDs a partir del nombre seleccionado
+                    val categoriaId = categorias.firstOrNull { it.nombre == categoria }?.id
+                    val ubicacionId = ubicaciones.firstOrNull { it.nombre == ubicacion }?.id
+
+                    if (categoriaId == null || ubicacionId == null) {
+                        Toast.makeText(
+                            context,
+                            "Categoría o ubicación no válida",
+                            Toast.LENGTH_SHORT
+                        ).show()
                         return@Button
                     }
 
                     if (modo == "AÑADIR") {
-                        viewModel.crearProyecto(
-                            Proyecto(
-                                titulo = titulo,
-                                descripcion = descripcion,
-                                categoria = categoria,
-                                estado = estado,
-                                urgencia = urgencia,
-                                ubicacion = ubicacion,
-                                fecha = fecha
-                            )
+                        viewModel.crearIncidencia(
+                            titulo,
+                            descripcion,
+                            categoriaId,
+                            urgencia,
+                            ubicacionId
                         )
                     } else {
-                        viewModel.modificarProyecto(
-                            proyectoSeleccionado!!.copy(
-                                titulo = titulo,
-                                descripcion = descripcion,
-                                categoria = categoria,
-                                estado = estado,
-                                urgencia = urgencia,
-                                ubicacion = ubicacion
-                            )
+                        val id = incidenciaSeleccionada!!.id
+                        viewModel.editarIncidencia(
+                            id,
+                            titulo,
+                            descripcion,
+                            categoriaId,
+                            urgencia,
+                            ubicacionId
                         )
+                        // Si el estado cambió, actualizarlo por separado
+                        if (estado != incidenciaSeleccionada!!.estado) {
+                            viewModel.cambiarEstadoIncidencia(id, estado)
+                        }
                     }
 
                     Toast.makeText(context, "Datos guardados", Toast.LENGTH_SHORT).show()
@@ -125,11 +135,10 @@ fun PantallaDetalle(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        //  ID
+        // ID (solo lectura)
         Text("ID Incidencia")
-        val idMostrar = if (modo == "AÑADIR") (proximoId + 1).toString() else (proyectoSeleccionado?.id ?: "").toString()
         OutlinedTextField(
-            value = idMostrar,
+            value = if (modo == "AÑADIR") "—" else (incidenciaSeleccionada?.id ?: "").toString(),
             onValueChange = {},
             enabled = false,
             modifier = Modifier.fillMaxWidth(),
@@ -143,14 +152,19 @@ fun PantallaDetalle(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        //  Título
+        // Título
         Text("Título")
         OutlinedTextField(
             value = titulo,
             onValueChange = { if (editableCampos) titulo = it },
             enabled = editableCampos,
             modifier = Modifier.fillMaxWidth(),
-            trailingIcon = { if (!editableCampos) Icon(Icons.Filled.Lock, contentDescription = "Bloqueado") },
+            trailingIcon = {
+                if (!editableCampos) Icon(
+                    Icons.Filled.Lock,
+                    contentDescription = "Bloqueado"
+                )
+            },
             colors = OutlinedTextFieldDefaults.colors(
                 disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 disabledBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
@@ -160,14 +174,21 @@ fun PantallaDetalle(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        //  Descripción
+        // Descripción
         Text("Descripción")
         OutlinedTextField(
             value = descripcion,
             onValueChange = { if (editableCampos) descripcion = it },
             enabled = editableCampos,
-            modifier = Modifier.fillMaxWidth().height(100.dp),
-            trailingIcon = { if (!editableCampos) Icon(Icons.Filled.Lock, contentDescription = "Bloqueado") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp),
+            trailingIcon = {
+                if (!editableCampos) Icon(
+                    Icons.Filled.Lock,
+                    contentDescription = "Bloqueado"
+                )
+            },
             colors = OutlinedTextFieldDefaults.colors(
                 disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 disabledBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
@@ -177,10 +198,10 @@ fun PantallaDetalle(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        //  Categoría
+        // Categoría
         Text("Categoría")
         ComboBoxDynamic(
-            options = categorias,
+            options = nombresCategorias,
             selectedOption = categoria,
             editable = editableCampos,
             onOptionSelected = { categoria = it }
@@ -188,7 +209,7 @@ fun PantallaDetalle(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        //  Estado
+        // Estado
         Text("Estado")
         if (modo == "AÑADIR") {
             OutlinedTextField(
@@ -214,7 +235,7 @@ fun PantallaDetalle(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        //  Urgencia
+        // Urgencia
         Text("Urgencia")
         ComboBoxDynamic(
             options = urgencias,
@@ -225,7 +246,7 @@ fun PantallaDetalle(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        //  Fecha
+        // Fecha (solo lectura)
         Text("Fecha")
         OutlinedTextField(
             value = fecha,
@@ -242,10 +263,10 @@ fun PantallaDetalle(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        //  Ubicación
+        // Ubicación
         Text("Ubicación")
         ComboBoxDynamic(
-            options = ubicaciones,
+            options = nombresUbicaciones,
             selectedOption = ubicacion,
             editable = editableCampos,
             onOptionSelected = { ubicacion = it },
@@ -256,7 +277,6 @@ fun PantallaDetalle(
     }
 }
 
-//  ComboBox dinámico con bloqueo
 @Composable
 fun ComboBoxDynamic(
     options: List<String>,
@@ -273,7 +293,12 @@ fun ComboBoxDynamic(
             onValueChange = {},
             readOnly = true,
             enabled = false,
-            trailingIcon = { if (!editable) Icon(Icons.Filled.Lock, contentDescription = "Bloqueado") },
+            trailingIcon = {
+                if (!editable) Icon(
+                    Icons.Filled.Lock,
+                    contentDescription = "Bloqueado"
+                )
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(enabled = editable) { expanded = true },
@@ -283,15 +308,11 @@ fun ComboBoxDynamic(
                 disabledLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
         )
-
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option) },
-                    onClick = {
-                        onOptionSelected(option)
-                        expanded = false
-                    }
+                    onClick = { onOptionSelected(option); expanded = false }
                 )
             }
         }
